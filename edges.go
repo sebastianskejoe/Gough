@@ -1,4 +1,4 @@
-package edges
+package main
 
 import (
 	"image"

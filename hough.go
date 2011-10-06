@@ -1,4 +1,4 @@
-package hough
+package main
 
 import (
 	"image"

@@ -1,4 +1,4 @@
-package geometry
+package main
 
 import (
 	"image/draw"
@@ -14,7 +14,7 @@ func absf(a float64) float64 {
 
 
 /* Line drawing - Bresenhams algorithm in it's simplest form.*/
-func Line(screen draw.Image, a image.Point, b image.Point, color image.Color) {
+func DrawLine(screen draw.Image, a image.Point, b image.Point, color image.Color) {
 	dx := b.X-a.X
 	dy := b.Y-a.Y
 	error := 0.0
@@ -31,7 +31,7 @@ func Line(screen draw.Image, a image.Point, b image.Point, color image.Color) {
 }
 
 
-func Circle(screen draw.Image, c image.Point, r int, color image.Color) {
+func DrawCircle(screen draw.Image, c image.Point, r int, color image.Color) {
 	f := 1-r
 	ddF_x := 1
 	ddF_y := -2*r
