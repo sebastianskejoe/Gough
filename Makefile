@@ -1,6 +1,12 @@
-all:
-	6g geometry.go
-	6g edges.go
-	6g hough.go
-	6g main.go
-	6l main.6
+include $(GOROOT)/src/Make.inc
+
+TARG=gough
+GOFILES=\
+	hough.go\
+	geometry.go\
+	edges.go\
+	interface.go\
+	helper.go\
+	main.go\
+
+include $(GOROOT)/src/Make.cmd
