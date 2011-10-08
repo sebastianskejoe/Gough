@@ -12,6 +12,8 @@ type Window struct {
 	Screen draw.Image
 	Centre Circle
 	Window gui.Window
+	Ppc int // pixel per centimeter
+	Dist int // distance from camera to track point
 }
 
 func filter(img *image.Image, filtered chan<- *image.Point) {
