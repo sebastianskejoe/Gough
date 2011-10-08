@@ -13,8 +13,7 @@ func abs(x int) int {
 }
 
 func clampedFilter(c image.Color) int {
-	r,_,_,_ := c.RGBA()
-	if r > 200 { return 255 }
+	if ColorIsGood(c) { return 255 }
 	return 0
 }
 
