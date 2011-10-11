@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"image"
 	"time"
 	"os"
 	"flag"
@@ -13,7 +12,6 @@ import (
 	"strconv"
 )
 
-var window Window
 
 var cpuprof = flag.String("cpuprofile", "", "Cpu profile")
 var drawGui = flag.Bool("gui", true, "Make a GUI")
@@ -22,60 +20,8 @@ var imgPath = flag.String("img", "", "The second image")
 var dist	= flag.Int("dist", 0, "Distance from camera to trackpoint")
 var width	= flag.Int("width", 0, "The diameter of the trackpoint in centimeters")
 
-
-func findCircle(img *image.Image) Circle {
-	filtered := make(chan *image.Point, 1000)
-	edge := make(chan image.Point, 100)
-	transformed := make(chan *Circle, 400)
-	var centre Circle
-
-
-	fmt.Printf("Finding circle\n")
-
-	window.State = WORKING
-	redraw(&window)
-
-	start := time.Seconds()
-
-	r := findBounds(img)
-
-	go filter(img,filtered)
-	go Sobel(img,filtered,edge)
-	go Transform(img, edge, transformed, r)
-
-	bx,by := (*img).Bounds().Max.X,(*img).Bounds().Max.Y
-	votes := make([]int, bx*by*bx)
-	max := 0
-	for {
-		c,ok := <-transformed
-
-		if ok != true {
-			break
-		}
-
-		index := (c.Radius-1)+bx*c.Centre.Y+bx*by*c.Centre.X
-		votes[index] += 1
-		if votes[index] > max {
-			max = votes[index]
-			centre = *c
-		}
-	}
-	end := time.Seconds()
-	fmt.Printf("Done in %d seconds\n", end-start)
-
-	window.State = IDLE
-
-	return centre
-}
-
-func TrimFunc(c int) bool {
-	if c == '[' || c == ']' {
-		return false
-	}
-	return true
-}
-
 func main() {
+	var window Window
 	flag.Parse()
 
 	// Parse image paths
@@ -150,12 +96,11 @@ func main() {
 			case 98:
 				go func() {
 					cfra := window.Cfra
-					for ; window.State == WORKING ; {
-						fmt.Printf("Waiting %d\n", window.State)
+					for ; GetState(&window) == WORKING ; {
 						time.Sleep(1e9)
 					}
 
-					window.Frames[cfra].Centre = findCircle(&window.Frames[cfra].img)
+					window.Frames[cfra].Centre = findCircle(&window,&window.Frames[cfra].img)
 					redraw(&window)
 				} ()
 			case 65361:

@@ -7,6 +7,8 @@ import (
 	"image/draw"
 	"os"
 	"image/png"
+	"sync"
+	"time"
 )
 
 const (
@@ -15,9 +17,7 @@ const (
 )
 
 type Window struct {
-	Bg image.Image
 	Screen draw.Image
-	Centre Circle
 	Window gui.Window
 	Ppc int // pixel per centimeter
 	Dist int // distance from camera to track point
@@ -25,6 +25,7 @@ type Window struct {
 	State int
 	FrameCount int
 	Frames []Frame
+	Calibration Frame
 }
 
 type Frame struct {
@@ -90,4 +91,70 @@ func getImage(path string) image.Image {
 		fmt.Printf("Error: %v\n", err)
 	}
 	return img
+}
+
+func TrimFunc(c int) bool {
+	if c == '[' || c == ']' {
+		return false
+	}
+	return true
+}
+
+var statemutex sync.Mutex
+
+func SetState(window *Window, state int) {
+	statemutex.Lock()
+	window.State = state
+	statemutex.Unlock()
+}
+
+func GetState(window *Window) int {
+	statemutex.Lock()
+	defer statemutex.Unlock()
+	return window.State
+}
+
+func findCircle(window *Window, img *image.Image) Circle {
+	filtered := make(chan *image.Point, 1000)
+	edge := make(chan image.Point, 100)
+	transformed := make(chan *Circle, 400)
+	var centre Circle
+
+
+	fmt.Printf("Finding circle\n")
+
+	SetState(window, WORKING)
+	redraw(window)
+
+	start := time.Seconds()
+
+	r := findBounds(img)
+
+	go filter(img,filtered)
+	go Sobel(img,filtered,edge)
+	go Transform(img, edge, transformed, r)
+
+	bx,by := (*img).Bounds().Max.X,(*img).Bounds().Max.Y
+	votes := make([]int, bx*by*bx)
+	max := 0
+	for {
+		c,ok := <-transformed
+
+		if ok != true {
+			break
+		}
+
+		index := (c.Radius-1)+bx*c.Centre.Y+bx*by*c.Centre.X
+		votes[index] += 1
+		if votes[index] > max {
+			max = votes[index]
+			centre = *c
+		}
+	}
+	end := time.Seconds()
+	fmt.Printf("Done in %d seconds\n", end-start)
+
+	SetState(window, IDLE)
+
+	return centre
 }
