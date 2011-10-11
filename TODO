@@ -1,0 +1,10 @@
+TODO
+========
+INTERFACE:
+ X Be able to step through frames and find circle
+ - Save circles from each frame and calculate distance
+DATA REPRESENTATION:
+ - 3D representation of data points
+ - Nicely formatted table
+GENERAL:
+ - Make main.go prettier

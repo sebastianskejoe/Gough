@@ -9,6 +9,11 @@ import (
 	"image/png"
 )
 
+const (
+	IDLE = iota
+	WORKING
+)
+
 type Window struct {
 	Bg image.Image
 	Screen draw.Image
@@ -17,6 +22,8 @@ type Window struct {
 	Ppc int // pixel per centimeter
 	Dist int // distance from camera to track point
 	Cfra int // current frame
+	State int
+	FrameCount int
 	Frames []Frame
 }
 
@@ -24,6 +31,7 @@ type Frame struct {
 	Path string
 	Id int
 	Centre Circle
+	img image.Image
 }
 
 func filter(img *image.Image, filtered chan<- *image.Point) {
