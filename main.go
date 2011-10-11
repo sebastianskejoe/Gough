@@ -33,7 +33,8 @@ func main() {
 		end,_ := strconv.Atoi(split[1])
 		f := 0
 		for i := start ; i <= end ; i++ {
-			window.Frames = append(window.Frames, Frame{Id: f, Path: strings.Replace(*imgPath, r, strconv.Itoa(i),-1)})
+			path := strings.Replace(*imgPath, r, strconv.Itoa(i),-1)
+			window.Frames = append(window.Frames, Frame{Id: f, Path: path})
 			f++
 		}
 		window.FrameCount = f
@@ -81,21 +82,11 @@ func main() {
 		case gui.KeyEvent:
 			fmt.Printf("Key: %d\n", e.Key)
 			switch e.Key {
-			case 99:
-				fmt.Println("Starting calibration")
-				// Find circle in calibration image
-/*				go func() {
-					c := findCircle(&img)
-					window.Centre = c
-					if *width != 0 {
-						window.Ppc = (window.Centre.Radius*2)/(*width)
-					}
-					redraw(&window)
-				} ()*/
-				break
-			case 98:
+			case 'c':
+			case KEY_SPACE: // space
 				go func() {
 					cfra := window.Cfra
+
 					for ; GetState(&window) == WORKING ; {
 						time.Sleep(1e9)
 					}
@@ -103,19 +94,17 @@ func main() {
 					window.Frames[cfra].Centre = findCircle(&window,&window.Frames[cfra].img)
 					redraw(&window)
 				} ()
-			case 65361:
+			case KEY_LEFT:
 				if window.Cfra > 0 {
 					window.Cfra--
 				}
 				redraw(&window)
-			case 65363:
+			case KEY_RIGHT:
 				if window.Cfra < window.FrameCount-1 {
 					window.Cfra++
 				}
 				redraw(&window)
-				break
 			default:
-				break
 			}
 		}
 	}

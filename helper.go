@@ -3,37 +3,11 @@ package main
 import (
 	"image"
 	"fmt"
-	"exp/gui"
-	"image/draw"
 	"os"
 	"image/png"
 	"sync"
 	"time"
 )
-
-const (
-	IDLE = iota
-	WORKING
-)
-
-type Window struct {
-	Screen draw.Image
-	Window gui.Window
-	Ppc int // pixel per centimeter
-	Dist int // distance from camera to track point
-	Cfra int // current frame
-	State int
-	FrameCount int
-	Frames []Frame
-	Calibration Frame
-}
-
-type Frame struct {
-	Path string
-	Id int
-	Centre Circle
-	img image.Image
-}
 
 func filter(img *image.Image, filtered chan<- *image.Point) {
 	bx := (*img).Bounds().Max.X
