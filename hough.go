@@ -6,10 +6,6 @@ import (
 	"fmt"
 )
 
-type Circle struct {
-	Centre image.Point
-	Radius int
-}
 
 func max(a, b int) int {
 	if a > b {

@@ -17,6 +17,11 @@ const (
 	KEY_RIGHT = 65363
 )
 
+type Circle struct {
+	Centre image.Point
+	Radius int
+}
+
 type Window struct {
 	Screen draw.Image
 	Window gui.Window
