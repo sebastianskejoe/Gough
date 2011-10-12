@@ -27,7 +27,7 @@ func filter(img *image.Image, filtered chan<- *image.Point) {
 
 func ColorIsGood(c image.Color) bool {
 	r,_,_,_ := c.RGBA()
-	if r > 200 {
+	if r > 30000 {
 		return true
 	}
 	return false
@@ -52,19 +52,21 @@ func findBounds(img *image.Image) image.Rectangle {
 	return image.Rect(minx,miny,maxx,maxy)
 }
 
-func getImage(path string) image.Image {
+func getImage(path string) (image.Image,os.Error) {
 	// Get image
 	file,err := os.Open(path)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
+		return nil,err
 	}
 	defer file.Close()
 
 	img,err := png.Decode(file)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
+		return nil,err
 	}
-	return img
+	return img,err
 }
 
 func TrimFunc(c int) bool {
@@ -88,27 +90,28 @@ func GetState(window *Window) int {
 	return window.State
 }
 
-func findCircle(window *Window, img *image.Image) Circle {
+func findCircle(window *Window, frame int) Circle {
 	filtered := make(chan *image.Point, 1000)
 	edge := make(chan image.Point, 100)
 	transformed := make(chan *Circle, 400)
 	var centre Circle
 
+	img,_ := getImage(window.Frames[frame].Path)
 
 	fmt.Printf("Finding circle\n")
 
 	SetState(window, WORKING)
-	redraw(window)
+	redraw(*window, window.Frames[frame])
 
 	start := time.Seconds()
 
-	r := findBounds(img)
+	r := findBounds(&img)
 
-	go filter(img,filtered)
-	go Sobel(img,filtered,edge)
-	go Transform(img, edge, transformed, r)
+	go filter(&img,filtered)
+	go Sobel(&img,filtered,edge)
+	go Transform(&img, edge, transformed, r)
 
-	bx,by := (*img).Bounds().Max.X,(*img).Bounds().Max.Y
+	bx,by := img.Bounds().Max.X,img.Bounds().Max.Y
 	votes := make([]int, bx*by*bx)
 	max := 0
 	for {
@@ -118,7 +121,7 @@ func findCircle(window *Window, img *image.Image) Circle {
 			break
 		}
 
-		index := (c.Radius-1)+bx*c.Centre.Y+bx*by*c.Centre.X
+		index := c.Radius+bx*c.Centre.Y+bx*by*c.Centre.X
 		votes[index] += 1
 		if votes[index] > max {
 			max = votes[index]

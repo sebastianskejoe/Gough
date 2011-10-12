@@ -15,7 +15,7 @@ import (
 
 var cpuprof = flag.String("cpuprofile", "", "Cpu profile")
 var drawGui = flag.Bool("gui", true, "Make a GUI")
-var calPath = flag.String("cal", "fig1.png", "The calibration image")
+var calPath = flag.String("cal", "", "The calibration image")
 var imgPath = flag.String("img", "", "The second image")
 var dist	= flag.Int("dist", 0, "Distance from camera to trackpoint")
 var width	= flag.Int("width", 0, "The diameter of the trackpoint in centimeters")
@@ -53,6 +53,12 @@ func main() {
 
 	// Calibration data
 	window.Dist = *dist
+	if *calPath != "" {
+		calimg,err := getImage(*calPath)
+		if err == nil {
+			window.Calibration = Frame{Path: *calPath, img: calimg}
+		}
+	}
 
 	// Create X11 window
 	xwindow,err := x11.NewWindow()
@@ -61,7 +67,7 @@ func main() {
 		fmt.Printf("Error: %v\n", err)
 	}
 	window.Screen = xwindow.Screen()
-	redraw(&window)
+	redraw(window, window.Frames[window.Cfra])
 
 
 	// Event loop
@@ -74,10 +80,10 @@ func main() {
 		switch e := event.(type) {
 		case gui.ConfigEvent:
 			window.Screen = xwindow.Screen()
-			redraw(&window)
+			redraw(window, window.Frames[window.Cfra])
 			break
 		case gui.MouseEvent:
-			redraw(&window)
+			redraw(window, window.Frames[window.Cfra])
 			break
 		case gui.KeyEvent:
 			fmt.Printf("Key: %d\n", e.Key)
@@ -91,19 +97,19 @@ func main() {
 						time.Sleep(1e9)
 					}
 
-					window.Frames[cfra].Centre = findCircle(&window,&window.Frames[cfra].img)
-					redraw(&window)
+					window.Frames[cfra].Centre = findCircle(&window,cfra)
+					redraw(window, window.Frames[cfra])
 				} ()
 			case KEY_LEFT:
 				if window.Cfra > 0 {
 					window.Cfra--
 				}
-				redraw(&window)
+				redraw(window, window.Frames[window.Cfra])
 			case KEY_RIGHT:
 				if window.Cfra < window.FrameCount-1 {
 					window.Cfra++
 				}
-				redraw(&window)
+				redraw(window, window.Frames[window.Cfra])
 			default:
 			}
 		}
