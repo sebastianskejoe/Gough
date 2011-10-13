@@ -38,5 +38,6 @@ type Frame struct {
 	Path string
 	Id int
 	Centre Circle
+	Calculated bool
 	img image.Image
 }

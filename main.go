@@ -89,6 +89,22 @@ func main() {
 			fmt.Printf("Key: %d\n", e.Key)
 			switch e.Key {
 			case 'c':
+			case 'a': // Find all circles
+				go func() {
+					for ; GetState(&window) == WORKING ; {
+						time.Sleep(1e9)
+					}
+
+					frame := window.Cfra
+					for i := 0 ; i < window.FrameCount ; i++ {
+						if window.Frames[frame].Calculated {
+							continue
+						}
+						window.Frames[frame].Centre = findCircle(&window,frame)
+						window.Frames[frame].Calculated = true
+						frame++
+					}
+				} ()
 			case KEY_SPACE: // space
 				go func() {
 					cfra := window.Cfra
@@ -98,6 +114,7 @@ func main() {
 					}
 
 					window.Frames[cfra].Centre = findCircle(&window,cfra)
+					window.Frames[cfra].Calculated = true
 					redraw(window, window.Frames[cfra])
 				} ()
 			case KEY_LEFT:

@@ -98,7 +98,7 @@ func findCircle(window *Window, frame int) Circle {
 
 	img,_ := getImage(window.Frames[frame].Path)
 
-	fmt.Printf("Finding circle\n")
+	fmt.Printf("Finding circle of %s\n", window.Frames[frame].Path)
 
 	SetState(window, WORKING)
 	redraw(*window, window.Frames[frame])
@@ -128,6 +128,7 @@ func findCircle(window *Window, frame int) Circle {
 			centre = *c
 		}
 	}
+
 	end := time.Seconds()
 	fmt.Printf("Done in %d seconds\n", end-start)
 
