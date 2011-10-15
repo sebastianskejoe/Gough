@@ -23,15 +23,11 @@ func Transform(img *image.Image, pixels <-chan image.Point, centres chan<- *Circ
 	maxr := float64(max/2*max/2)
 	sent := 0
 
-	for {
-		pixel,ok := <-pixels
-		if ok == false {
-			break
-		}
+	for pixel := range pixels {
 		px,py := pixel.X, pixel.Y
 
 		for x := b.Min.X ; x < b.Max.X ; x++ {
-			for y := b.Min.Y ; y < b.Max.X ; y++ {
+			for y := b.Min.Y ; y < b.Max.Y ; y++ {
 
 				// Much much faster than doing math.Pow(..., 2)
 				a := float64((px-x)*(px-x))

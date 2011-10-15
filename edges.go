@@ -2,6 +2,7 @@ package main
 
 import (
 	"image"
+	"image/color"
 	"fmt"
 )
 
@@ -12,7 +13,7 @@ func abs(x int) int {
 	return x
 }
 
-func clampedFilter(c image.Color) int {
+func clampedFilter(c color.Color) int {
 	if ColorIsGood(c) { return 255 }
 	return 0
 }
@@ -20,11 +21,7 @@ func clampedFilter(c image.Color) int {
 func Sobel(imgP *image.Image, pixels <-chan *image.Point, edge chan<- image.Point) {
 	img := *imgP
 	sent := 0
-	for {
-		pixel,ok := <-pixels
-		if ok == false {
-			break
-		}
+	for pixel := range pixels {
 		x,y := pixel.X,pixel.Y
 
 		gx := clampedFilter(img.At(x-1,y-1))+2*clampedFilter(img.At(x,y-1))+clampedFilter(img.At(x+1,y-1)) -
