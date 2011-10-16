@@ -3,22 +3,16 @@ package main
 import (
 	"image/draw"
 	"image"
+	"image/color"
+	"math"
 )
 
-func absf(a float64) float64 {
-	if a < 0 {
-		return -a
-	}
-	return a
-}
-
-
 /* Line drawing - Bresenhams algorithm in it's simplest form.*/
-func DrawLine(screen draw.Image, a image.Point, b image.Point, color image.Color) {
+func DrawLine(screen draw.Image, a image.Point, b image.Point, color color.Color) {
 	dx := b.X-a.X
 	dy := b.Y-a.Y
 	error := 0.0
-	derr := absf(float64(dy)/float64(dx))
+	derr := math.Abs(float64(dy)/float64(dx))
 	y := a.Y
 	for x := a.X ; x < b.X ; x++ {
 		screen.Set(x, y, color)
@@ -31,7 +25,7 @@ func DrawLine(screen draw.Image, a image.Point, b image.Point, color image.Color
 }
 
 
-func DrawCircle(screen draw.Image, c image.Point, r int, color image.Color) {
+func DrawCircle(screen draw.Image, c image.Point, r int, color color.Color) {
 	f := 1-r
 	ddF_x := 1
 	ddF_y := -2*r
