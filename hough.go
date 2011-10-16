@@ -15,9 +15,10 @@ func max(a, b int) int {
 }
 
 /* Performs the hough transformation
- * Edge pixels to transform */
-func Transform(img *image.Image, pixels <-chan image.Point, centres chan<- *Circle, b image.Rectangle) {
-//	imgx,imgy := (*img).Bounds().Max.X, (*img).Bounds().Max.Y
+* pixels: pixels to transform
+* centres: calculated circles
+* b: all pixels sent along pixels are within b, meaning that the centre must be inside of b. This assumes high quality data.*/
+func Transform(pixels <-chan image.Point, centres chan<- *Circle, b image.Rectangle) {
 	max := max(b.Max.X-b.Min.X, b.Max.Y-b.Min.Y)
 	// Radius cannot be bigger than max/, so a+b cannot be bigger than max
 	maxr := float64(max/2*max/2)
