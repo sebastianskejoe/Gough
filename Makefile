@@ -8,6 +8,7 @@ GOFILES=\
 	interface.go\
 	helper.go\
 	common.go\
+	storage.go\
 	main.go\
 
 include $(GOROOT)/src/Make.cmd

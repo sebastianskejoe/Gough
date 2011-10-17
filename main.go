@@ -23,6 +23,8 @@ var imgPath = flag.String("img", "", "The second image")
 var dist	= flag.Int("dist", 0, "Distance from camera to trackpoint")
 var width	= flag.Int("width", 0, "The diameter of the trackpoint in centimeters")
 
+var savefile= flag.String("file", "", "File to save/load data to/from.")
+
 func main() {
 	var window Window
 	flag.Parse()
@@ -41,6 +43,8 @@ func main() {
 			f++
 		}
 		window.FrameCount = f
+	} else if *savefile != "" {
+		load(&window, *savefile)
 	}
 
 	// Do cpu profiling if asked for
@@ -93,6 +97,16 @@ func main() {
 			fmt.Printf("Key: %d\n", e.Key)
 			switch e.Key {
 			case 'c':
+			case 's':
+				err := save(&window,*savefile)
+				if err != nil {
+					fmt.Printf("Error while saving: %s\n", err)
+				}
+			case 'l':
+				err := load(&window, *savefile)
+				if err != nil {
+					fmt.Printf("Error while loading: %s\n", err)
+				}
 			case 'm':
 				if *memprof == "" {
 					break
@@ -103,6 +117,7 @@ func main() {
 				memno++
 			case 'a': // Find all circles
 				go func() {
+					fmt.Println("Trying to transform all frames .. ")
 					for ; GetState(&window) == WORKING ; {
 						time.Sleep(1e9)
 					}
@@ -117,6 +132,7 @@ func main() {
 						frame++
 						runtime.GC()
 					}
+					fmt.Println("All frames transformed!")
 				} ()
 			case 'g':
 				fmt.Println("Garbage collecting")
