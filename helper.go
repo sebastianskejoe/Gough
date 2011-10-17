@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"image/png"
+	"image/color"
 	"sync"
 	"time"
 )
@@ -25,7 +26,7 @@ func filter(img *image.Image, filtered chan<- *image.Point) {
 	close(filtered)
 }
 
-func ColorIsGood(c image.Color) bool {
+func ColorIsGood(c color.Color) bool {
 	r,_,_,_ := c.RGBA()
 	if r > 30000 {
 		return true
@@ -94,7 +95,6 @@ func findCircle(window *Window, frame int) Circle {
 	filtered := make(chan *image.Point, 1000)
 	edge := make(chan image.Point, 100)
 	transformed := make(chan *Circle, 400)
-	var centre Circle
 
 	img,_ := getImage(window.Frames[frame].Path)
 
@@ -109,19 +109,18 @@ func findCircle(window *Window, frame int) Circle {
 
 	go filter(&img,filtered)
 	go Sobel(&img,filtered,edge)
-	go Transform(&img, edge, transformed, r)
+	go Transform(edge, transformed, r)
 
 	bx,by := img.Bounds().Max.X,img.Bounds().Max.Y
 	votes := make([]int, bx*by*bx)
+	votes[0] = 1
+	var c *Circle
+	var centre Circle
+	var index int
 	max := 0
-	for {
-		c,ok := <-transformed
 
-		if ok != true {
-			break
-		}
-
-		index := c.Radius+bx*c.Centre.Y+bx*by*c.Centre.X
+	for c = range transformed {
+		index = c.Radius+bx*c.Centre.Y+bx*by*c.Centre.X
 		votes[index] += 1
 		if votes[index] > max {
 			max = votes[index]

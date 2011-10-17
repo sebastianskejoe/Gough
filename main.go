@@ -10,10 +10,13 @@ import (
 	"exp/gui"
 	"strings"
 	"strconv"
+	"runtime"
 )
 
 
+
 var cpuprof = flag.String("cpuprofile", "", "Cpu profile")
+var memprof = flag.String("memprofile", "", "Memory profile")
 var drawGui = flag.Bool("gui", true, "Make a GUI")
 var calPath = flag.String("cal", "", "The calibration image")
 var imgPath = flag.String("img", "", "The second image")
@@ -69,6 +72,7 @@ func main() {
 	window.Screen = xwindow.Screen()
 	redraw(window, window.Frames[window.Cfra])
 
+	memno := 1
 
 	// Event loop
 	for {
@@ -89,6 +93,14 @@ func main() {
 			fmt.Printf("Key: %d\n", e.Key)
 			switch e.Key {
 			case 'c':
+			case 'm':
+				if *memprof == "" {
+					break
+				}
+				f,_ := os.Create(fmt.Sprintf("%s%d",*memprof,memno))
+				pprof.WriteHeapProfile(f)
+				f.Close()
+				memno++
 			case 'a': // Find all circles
 				go func() {
 					for ; GetState(&window) == WORKING ; {
@@ -103,11 +115,19 @@ func main() {
 						window.Frames[frame].Centre = findCircle(&window,frame)
 						window.Frames[frame].Calculated = true
 						frame++
+						runtime.GC()
 					}
 				} ()
+			case 'g':
+				fmt.Println("Garbage collecting")
+				runtime.GC()
 			case KEY_SPACE: // space
 				go func() {
 					cfra := window.Cfra
+
+					if window.Frames[cfra].Calculated {
+						return
+					}
 
 					for ; GetState(&window) == WORKING ; {
 						time.Sleep(1e9)
@@ -116,6 +136,7 @@ func main() {
 					window.Frames[cfra].Centre = findCircle(&window,cfra)
 					window.Frames[cfra].Calculated = true
 					redraw(window, window.Frames[cfra])
+					runtime.GC()
 				} ()
 			case KEY_LEFT:
 				if window.Cfra > 0 {

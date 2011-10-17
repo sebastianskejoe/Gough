@@ -41,7 +41,10 @@ func Transform(pixels <-chan image.Point, centres chan<- *Circle, b image.Rectan
 				if r < 0 || r > max {
 					continue
 				}
-				centres <- &Circle{Centre: image.Point{x,y}, Radius: r}
+				c := new(Circle)
+				c.Centre = image.Point{x,y}
+				c.Radius = r
+				centres <- c
 				sent++
 			}
 		}
