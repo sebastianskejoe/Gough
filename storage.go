@@ -25,7 +25,6 @@ func load(w *Window, path string) os.Error {
 		x,_ := strconv.Atoi(items[2])
 		y,_ := strconv.Atoi(items[3])
 		radius,_ := strconv.Atoi(items[4][0:len(items[4])-1])
-		fmt.Printf("%d %s %d %d %d\n",id,fpath,x,y,radius)
 		w.Frames = append(w.Frames, Frame{Id: id, Path: fpath, Centre: Circle{Centre: image.Point{x,y}, Radius: radius}})
 		count++
 	}

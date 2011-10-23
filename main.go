@@ -94,19 +94,24 @@ func main() {
 			redraw(window, window.Frames[window.Cfra])
 			break
 		case gui.KeyEvent:
-			fmt.Printf("Key: %d\n", e.Key)
 			switch e.Key {
 			case 'c':
 			case 's':
+				fmt.Printf("Saving to %s ... ", *savefile)
 				err := save(&window,*savefile)
 				if err != nil {
 					fmt.Printf("Error while saving: %s\n", err)
+					break
 				}
+				fmt.Println("Done!")
 			case 'l':
+				fmt.Printf("Loading from %s ... ", *savefile)
 				err := load(&window, *savefile)
 				if err != nil {
 					fmt.Printf("Error while loading: %s\n", err)
+					break
 				}
+				fmt.Println("Done!")
 			case 'm':
 				if *memprof == "" {
 					break

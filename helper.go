@@ -13,16 +13,16 @@ import (
 func filter(img *image.Image, filtered chan<- *image.Point) {
 	bx := (*img).Bounds().Max.X
 	by := (*img).Bounds().Max.Y
-	sent := 0
+//	sent := 0
 	for x := 0 ; x < bx ; x++ {
 		for y := 0 ; y < by ; y++ {
 			if ColorIsGood((*img).At(x,y)) {
 				filtered <- &image.Point{x,y}
-				sent++
+//				sent++
 			}
 		}
 	}
-	fmt.Printf("Sent %d times in filter()\n", sent)
+//	fmt.Printf("Sent %d times in filter()\n", sent)
 	close(filtered)
 }
 
@@ -98,7 +98,7 @@ func findCircle(window *Window, frame int) Circle {
 
 	img,_ := getImage(window.Frames[frame].Path)
 
-	fmt.Printf("Finding circle of %s\n", window.Frames[frame].Path)
+	fmt.Printf("Finding circle of %s ... ", window.Frames[frame].Path)
 
 	SetState(window, WORKING)
 	redraw(*window, window.Frames[frame])

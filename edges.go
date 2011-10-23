@@ -3,7 +3,7 @@ package main
 import (
 	"image"
 	"image/color"
-	"fmt"
+//	"fmt"
 )
 
 func abs(x int) int {
@@ -20,7 +20,7 @@ func clampedFilter(c color.Color) int {
 
 func Sobel(imgP *image.Image, pixels <-chan *image.Point, edge chan<- image.Point) {
 	img := *imgP
-	sent := 0
+//	sent := 0
 	for pixel := range pixels {
 		x,y := pixel.X,pixel.Y
 
@@ -33,9 +33,9 @@ func Sobel(imgP *image.Image, pixels <-chan *image.Point, edge chan<- image.Poin
 		g := abs(gx)+abs(gy)
 		if g >= 255 {
 			edge <-*pixel
-			sent++
+//			sent++
 		}
 	}
-	fmt.Printf("Sent %d times in edges.Sobel\n", sent)
+//	fmt.Printf("Sent %d times in edges.Sobel\n", sent)
 	close(edge)
 }

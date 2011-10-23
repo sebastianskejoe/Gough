@@ -3,7 +3,7 @@ package main
 import (
 	"image"
 	"math"
-	"fmt"
+//	"fmt"
 )
 
 
@@ -22,7 +22,7 @@ func Transform(pixels <-chan image.Point, centres chan<- *Circle, b image.Rectan
 	max := max(b.Max.X-b.Min.X, b.Max.Y-b.Min.Y)
 	// Radius cannot be bigger than max/, so a+b cannot be bigger than max
 	maxr := float64(max/2*max/2)
-	sent := 0
+//	sent := 0
 
 	for pixel := range pixels {
 		px,py := pixel.X, pixel.Y
@@ -45,10 +45,10 @@ func Transform(pixels <-chan image.Point, centres chan<- *Circle, b image.Rectan
 				c.Centre = image.Point{x,y}
 				c.Radius = r
 				centres <- c
-				sent++
+//				sent++
 			}
 		}
 	}
-	fmt.Printf("Sent %d times in hough.Transform()\n", sent)
+//	fmt.Printf("Sent %d times in hough.Transform()\n", sent)
 	close(centres)
 }
