@@ -1,14 +1,7 @@
 package main
 
 import (
-	"exp/gui"
 	"image"
-	"image/draw"
-)
-
-const (
-	IDLE = iota
-	WORKING
 )
 
 const (
@@ -20,18 +13,6 @@ const (
 type Circle struct {
 	Centre image.Point
 	Radius int
-}
-
-type Window struct {
-	Screen draw.Image
-	Window gui.Window
-	Ppc int // pixel per centimeter
-	Dist int // distance from camera to track point
-	Cfra int // current frame
-	State int
-	FrameCount int
-	Frames []Frame
-	Calibration Frame
 }
 
 type Frame struct {

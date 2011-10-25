@@ -6,7 +6,6 @@ import (
 	"os"
 	"image/png"
 	"image/color"
-	"sync"
 	"time"
 )
 
@@ -77,20 +76,6 @@ func TrimFunc(c int) bool {
 	return true
 }
 
-var statemutex sync.Mutex
-
-func SetState(window *Window, state int) {
-	statemutex.Lock()
-	window.State = state
-	statemutex.Unlock()
-}
-
-func GetState(window *Window) int {
-	statemutex.Lock()
-	defer statemutex.Unlock()
-	return window.State
-}
-
 func findCircle(window *Window, frame int) Circle {
 	filtered := make(chan *image.Point, 1000)
 	edge := make(chan image.Point, 100)
@@ -100,8 +85,8 @@ func findCircle(window *Window, frame int) Circle {
 
 	fmt.Printf("Finding circle of %s ... ", window.Frames[frame].Path)
 
-	SetState(window, WORKING)
-	redraw(*window, window.Frames[frame])
+	window.SetState(WORKING)
+	window.DrawFrame(frame)
 
 	start := time.Seconds()
 
@@ -131,7 +116,7 @@ func findCircle(window *Window, frame int) Circle {
 	end := time.Seconds()
 	fmt.Printf("Done in %d seconds\n", end-start)
 
-	SetState(window, IDLE)
+	window.SetState(IDLE)
 
 	return centre
 }

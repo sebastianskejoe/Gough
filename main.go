@@ -74,7 +74,7 @@ func main() {
 		fmt.Printf("Error: %v\n", err)
 	}
 	window.Screen = xwindow.Screen()
-	redraw(window, window.Frames[window.Cfra])
+	window.DrawFrame(window.Cfra)
 
 	memno := 1
 
@@ -88,10 +88,10 @@ func main() {
 		switch e := event.(type) {
 		case gui.ConfigEvent:
 			window.Screen = xwindow.Screen()
-			redraw(window, window.Frames[window.Cfra])
+			window.DrawFrame(window.Cfra)
 			break
 		case gui.MouseEvent:
-			redraw(window, window.Frames[window.Cfra])
+			window.DrawFrame(window.Cfra)
 			break
 		case gui.KeyEvent:
 			switch e.Key {
@@ -123,7 +123,7 @@ func main() {
 			case 'a': // Find all circles
 				go func() {
 					fmt.Println("Trying to transform all frames .. ")
-					for ; GetState(&window) == WORKING ; {
+					for ; window.GetState() == WORKING ; {
 						time.Sleep(1e9)
 					}
 
@@ -150,25 +150,25 @@ func main() {
 						return
 					}
 
-					for ; GetState(&window) == WORKING ; {
+					for ; window.GetState() == WORKING ; {
 						time.Sleep(1e9)
 					}
 
 					window.Frames[cfra].Centre = findCircle(&window,cfra)
 					window.Frames[cfra].Calculated = true
-					redraw(window, window.Frames[cfra])
+					window.DrawFrame(cfra)
 					runtime.GC()
 				} ()
 			case KEY_LEFT:
 				if window.Cfra > 0 {
 					window.Cfra--
 				}
-				redraw(window, window.Frames[window.Cfra])
+				window.DrawFrame(window.Cfra)
 			case KEY_RIGHT:
 				if window.Cfra < window.FrameCount-1 {
 					window.Cfra++
 				}
-				redraw(window, window.Frames[window.Cfra])
+				window.DrawFrame(window.Cfra)
 			default:
 			}
 		}

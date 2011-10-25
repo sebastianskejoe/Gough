@@ -5,7 +5,7 @@ GOFILES=\
 	hough.go\
 	geometry.go\
 	edges.go\
-	interface.go\
+	window.go\
 	helper.go\
 	common.go\
 	storage.go\
