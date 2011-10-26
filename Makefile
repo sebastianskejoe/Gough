@@ -11,4 +11,7 @@ GOFILES=\
 	storage.go\
 	main.go\
 
+GCIMPORTS=-I $(GOPATH)/pkg/linux_amd64
+LDIMPORTS=-L $(GOPATH)/pkg/linux_amd64
+
 include $(GOROOT)/src/Make.cmd

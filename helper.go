@@ -7,6 +7,9 @@ import (
 	"image/png"
 	"image/color"
 	"time"
+
+	"encoding/base64"
+	"bytes"
 )
 
 func filter(img *image.Image, filtered chan<- *image.Point) {
@@ -76,17 +79,17 @@ func TrimFunc(c int) bool {
 	return true
 }
 
-func findCircle(window *Window, frame int) Circle {
+func findCircle(window *Window, frame int) (Circle,os.Error) {
 	filtered := make(chan *image.Point, 1000)
 	edge := make(chan image.Point, 100)
 	transformed := make(chan *Circle, 400)
 
-	img,_ := getImage(window.Frames[frame].Path)
+	img,err := getImage(window.Frames[frame].Path)
+	if err != nil {
+		return Circle{},err
+	}
 
 	fmt.Printf("Finding circle of %s ... ", window.Frames[frame].Path)
-
-	window.SetState(WORKING)
-	window.DrawFrame(frame)
 
 	start := time.Seconds()
 
@@ -116,7 +119,12 @@ func findCircle(window *Window, frame int) Circle {
 	end := time.Seconds()
 	fmt.Printf("Done in %d seconds\n", end-start)
 
-	window.SetState(IDLE)
+	return centre,nil
+}
 
-	return centre
+func pngToBase64(img image.Image) string {
+	buf := bytes.NewBufferString("")
+	png.Encode(buf, img)
+	enc := base64.StdEncoding
+	return enc.EncodeToString(buf.Bytes())
 }
