@@ -7,9 +7,6 @@ import (
 	"image/png"
 	"image/color"
 	"time"
-
-	"encoding/base64"
-	"bytes"
 )
 
 func filter(img *image.Image, filtered chan<- *image.Point) {
@@ -79,17 +76,17 @@ func TrimFunc(c int) bool {
 	return true
 }
 
-func findCircle(window *Window, frame int) (Circle,os.Error) {
+func findCircle(path string) (Circle,os.Error) {
 	filtered := make(chan *image.Point, 1000)
 	edge := make(chan image.Point, 100)
 	transformed := make(chan *Circle, 400)
 
-	img,err := getImage(window.Frames[frame].Path)
+	img,err := getImage(path)
 	if err != nil {
 		return Circle{},err
 	}
 
-	fmt.Printf("Finding circle of %s ... ", window.Frames[frame].Path)
+	fmt.Printf("Finding circle of %s ... ", path)
 
 	start := time.Seconds()
 
@@ -100,12 +97,12 @@ func findCircle(window *Window, frame int) (Circle,os.Error) {
 	go Transform(edge, transformed, r)
 
 	bx,by := img.Bounds().Max.X,img.Bounds().Max.Y
-	votes := make([]int, bx*by*bx)
+	votes := make([]int32, bx*by*bx)
 	votes[0] = 1
 	var c *Circle
 	var centre Circle
 	var index int
-	max := 0
+	max := int32(0)
 
 	for c = range transformed {
 		index = c.Radius+bx*c.Centre.Y+bx*by*c.Centre.X
@@ -120,11 +117,4 @@ func findCircle(window *Window, frame int) (Circle,os.Error) {
 	fmt.Printf("Done in %d seconds\n", end-start)
 
 	return centre,nil
-}
-
-func pngToBase64(img image.Image) string {
-	buf := bytes.NewBufferString("")
-	png.Encode(buf, img)
-	enc := base64.StdEncoding
-	return enc.EncodeToString(buf.Bytes())
 }
