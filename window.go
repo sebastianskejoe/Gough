@@ -12,6 +12,8 @@ import (
 
 	"strings"
 	"strconv"
+
+	"runtime"
 )
 
 type Window struct {
@@ -28,10 +30,7 @@ type Window struct {
 }
 
 func NewWindow(w,h int) (*Window, os.Error) {
-	ir,err := gothic.NewInterpreter()
-	if err != nil {
-		return nil, err
-	}
+	ir := gothic.NewInterpreter("")
 	window := &Window{
 		IR: ir,
 		Screen: image.NewNRGBA(image.Rect(0,0,w,h)),
@@ -57,34 +56,42 @@ func (w *Window) DrawFrame(frame int) os.Error {
 			return err
 		}
 	}
-	draw.Draw(w.Screen, f.img.Bounds(), f.img, image.Point{0,0}, draw.Over)
+	w.Screen = image.NewNRGBA(f.img.Bounds())
+	draw.Draw(w.Screen, f.img.Bounds(), f.img, image.Point{0,0}, draw.Src)
 	DrawCircle(w.Screen, f.Centre.Centre, f.Centre.Radius, color.RGBA{0,255,255,255})
 	return nil
 }
 
-var fc *gothic.StringVar
-
 func (w *Window) CreateGUI() {
 	w.IR.UploadImage("screen", w.Screen)
 
-	path := w.IR.NewStringVar("path")
-
-	fc = w.IR.NewStringVar("framecounter")
-
-	w.IR.RegisterCallback("nextframe", func () {w.NextFrame()})
-	w.IR.RegisterCallback("prevframe", func () {w.PrevFrame()})
-	w.IR.RegisterCallback("loadframes", func () {w.LoadFrames(path.Get())})
-	w.IR.RegisterCallback("findcircle", func () {w.CalculateCurrent()})
+	w.IR.RegisterCommand("nextframe", func () {w.NextFrame()})
+	w.IR.RegisterCommand("prevframe", func () {w.PrevFrame()})
+	w.IR.RegisterCommand("loadframes", func () {w.LoadFrames(w.IR.EvalAsString("set path"))})
+	w.IR.RegisterCommand("calibrate", func () {w.Calibrate(w.IR.EvalAsString("set calpath"))})
+	w.IR.RegisterCommand("findcircle", func () {w.CalculateCurrent()})
+	w.IR.RegisterCommand("findall", func () {w.CalculateAll()})
 	w.IR.Eval(fmt.Sprintf(`
-entry .filename
-grid [button .prev -text "Previous" -command {prevframe}] -column 0 -row 0 -sticky news
-grid [button .next -text "Next" -command {nextframe}] -column 1 -row 0 -sticky nwes
-grid [entry .path -textvariable path] -column 0 -row 1 -sticky nwes
-grid [button .addpaths -text "Add frames" -command {loadframes}] -column 1 -row 1
-grid [button .findcircle -text "Find circle" -command {findcircle}] -column 0 -row 2
-grid [label .canvas -image screen] -columnspan 1 -column 0 -row 3 -sticky news
+ttk::entry .filename
+grid [ttk::button .prev -text "Previous" -command {prevframe}] -column 0 -row 0 -sticky news
+grid [ttk::button .next -text "Next" -command {nextframe}] -column 1 -row 0 -sticky nwes
 
-grid [label .framecounter -textvariable framecounter] -columnspan 2 -column 0 -row 4 -sticky news
+grid [ttk::entry .path -textvariable path] -column 0 -row 1 -sticky nwes
+grid [ttk::button .addpaths -text "Add frames" -command {loadframes}] -column 1 -row 1
+
+grid [ttk::entry .calibrate -textvariable calpath] -column 0 -row 2 -sticky nwes
+grid [ttk::spinbox .distance -from 0 -to 900 -textvariable distance] -column 1 -row 2 -sticky news
+grid [ttk::spinbox .width -from 0 -to 900 -textvariable width] -column 0 -row 3 -sticky news
+grid [ttk::button .docalibrate -text "Calibrate" -command {calibrate}] -column 1 -row 3
+
+grid [ttk::button .findcircle -text "Find circle" -command {findcircle}] -column 0 -row 4
+grid [ttk::button .findall -text "Find all circles" -command {findall}] -column 1 -row 4
+
+grid [canvas .canvas] -columnspan 2 -column 0 -row 5 -sticky news
+.canvas create image 0 0 -anchor nw -image screen
+
+grid [ttk::label .framecounter -textvariable framecounter] -column 0 -row 6 -sticky news
+grid [ttk::progressbar .progress -maximum 1] -column 1 -row 6 -sticky nwes
 
 bind . <Left> { prevframe }
 bind . <Right> { nextframe }
@@ -92,18 +99,21 @@ bind . <Right> { nextframe }
 }
 
 func (w *Window) Update(frame int) {
+	fmt.Println("### In update")
 	err := w.DrawFrame(frame)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	w.IR.UploadImage("screen", w.Screen)
+	w.IR.Eval(".canvas configure -width ",w.Screen.Bounds().Max.X," -height ",w.Screen.Bounds().Max.Y)
+	w.IR.Eval(`wm geometry [winfo parent .canvas] ""`)
 
 	// Frame counter
 	if w.GetState() == IDLE {
-		fc.Set(fmt.Sprintf("%d/%d",w.Cfra+1,w.FrameCount))
+		w.IR.Eval(`set framecounter "`,w.Cfra+1,"/",w.FrameCount,`"`)
 	} else {
-		fc.Set(fmt.Sprintf("WORKING! %d/%d", w.Cfra+1, w.FrameCount))
+		w.IR.Eval(`set framecounter "WORKING `,w.Cfra+1,"/",w.FrameCount,`"`)
 	}
 }
 
@@ -147,13 +157,16 @@ func (w *Window) PrevFrame() {
 func (w *Window) CalculateCurrent() {
 	cfra := w.Cfra
 	go func() {
+		if w.Frames[cfra].Calculated {
+			return
+		}
 		if w.GetState() != IDLE {
-			w.IR.AsyncEval(`tk_messageBox -message "Already working!" -icon error`)
+			w.IR.Eval(`tk_messageBox -message "Already working!" -icon error`)
 			return
 		}
 		w.SetState(WORKING)
-		w.IR.Async(func () {w.Update(w.Cfra)},nil,nil)
-		c,err := findCircle(w, cfra)
+		w.Update(w.Cfra)
+		c,err := findCircle(w.Frames[cfra].Path)
 		w.SetState(IDLE)
 		if err != nil {
 			fmt.Println(err)
@@ -161,13 +174,71 @@ func (w *Window) CalculateCurrent() {
 		}
 		w.Frames[cfra].Centre = c
 		w.Frames[cfra].Calculated = true
-		w.IR.Async(func () {
-			w.Update(cfra)
-		}, nil, nil)
+		w.Update(cfra)
+		runtime.GC()
 	} ()
 }
 
 func (w *Window) CalculateAll() {
+	w.IR.Eval(".progress configure -maximum ",w.FrameCount)
+	go func () {
+		if w.GetState() != IDLE {
+			w.IR.Eval(`tk_messageBox -message "Already working!" -icon error`)
+			return
+		}
+		w.SetState(WORKING)
+
+		// Loop thorugh each frame
+		for frame := 0 ; frame < w.FrameCount ; frame++ {
+			if w.Frames[frame].Calculated {
+				continue
+			}
+			c,err := findCircle(w.Frames[frame].Path)
+			if err != nil {
+				w.IR.Eval(fmt.Sprintf(`tk_messageBox -message "Couldn't find circle of frame %d - %s" -icon error`, frame, err))
+				continue
+			}
+			// New cicle successfully found
+			w.Frames[frame].Centre = c
+			w.Frames[frame].Calculated = true
+			runtime.GC()
+			w.IR.Eval(".progress configure -value ", frame+1)
+		}
+		w.IR.Eval(".progress configure -value ", 0)
+
+		w.SetState(IDLE)
+		fmt.Println("Now we want to update")
+		w.Update(w.Cfra)
+	} ()
+}
+
+func (w *Window) Calibrate(path string) {
+	w.Calibration.Path = path
+	w.Dist = w.IR.EvalAsInt("set distance")
+	width := w.IR.EvalAsInt("set width")
+	go func () {
+		if w.Calibration.Calculated {
+			return
+		}
+		if w.GetState() != IDLE {
+			w.IR.Eval(`tk_messageBox -message "Already working!" -icon error`)
+			return
+		}
+		w.SetState(WORKING)
+		w.Update(w.Cfra)
+		c,err := findCircle(path)
+		w.SetState(IDLE)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		w.Calibration.Centre = c
+		w.Calibration.Calculated = true
+		w.Ppc = int(float32(w.Calibration.Centre.Radius*2)/float32(width))
+		fmt.Println(w.Calibration.Centre.Radius, w.Ppc)
+		w.Update(w.Cfra)
+		runtime.GC()
+	} ()
 }
 
 func (w *Window) LoadFrames(imgPath string) {
