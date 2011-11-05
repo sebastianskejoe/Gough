@@ -9,6 +9,7 @@ GOFILES=\
 	helper.go\
 	common.go\
 	storage.go\
+	frame.go\
 	main.go\
 
 GCIMPORTS=-I $(GOPATH)/pkg/linux_amd64
