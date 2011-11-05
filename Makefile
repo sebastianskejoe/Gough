@@ -10,6 +10,7 @@ GOFILES=\
 	common.go\
 	storage.go\
 	frame.go\
+	calibration.go\
 	main.go\
 
 GCIMPORTS=-I $(GOPATH)/pkg/linux_amd64

@@ -11,20 +11,17 @@ import (
 
 	"strconv"
 	"strings"
-
-	"runtime"
 )
 
 type Window struct {
 	Screen      draw.Image
 	Window      gui.Window
 	Ppc         int // pixel per centimeter
-	Dist        int // distance from camera to track point
 	Cfra        int // current frame
 	State       int
 	FrameCount  int
 	Frames      []Frame
-	Calibration Frame
+	Calibration CalibrationData
 	IR          *gothic.Interpreter
 }
 
@@ -67,7 +64,7 @@ func (w *Window) CreateGUI() {
 	w.IR.RegisterCommand("nextframe", func() { w.NextFrame() })
 	w.IR.RegisterCommand("prevframe", func() { w.PrevFrame() })
 	w.IR.RegisterCommand("loadframes", func() { w.LoadFrames(w.IR.EvalAsString("set path")) })
-	w.IR.RegisterCommand("calibrate", func() { w.Calibrate(w.IR.EvalAsString("set calpath")) })
+	w.IR.RegisterCommand("calibrate", func() { w.Calibrate() })
 	w.IR.RegisterCommand("findcircle", func() { w.CalculateCurrent() })
 	w.IR.RegisterCommand("findall", func() { w.CalculateAll() })
 	w.IR.Eval(fmt.Sprintf(`
@@ -80,7 +77,7 @@ grid [ttk::button .addpaths -text "Add frames" -command {loadframes}] -column 1 
 grid [ttk::entry .calibrate -textvariable calpath] -column 0 -row 2 -sticky nwes
 grid [ttk::spinbox .distance -from 0 -to 900 -textvariable distance] -column 1 -row 2 -sticky news
 grid [ttk::spinbox .width -from 0 -to 900 -textvariable width] -column 0 -row 3 -sticky news
-grid [ttk::button .docalibrate -text "Calibrate" -command {calibrate}] -column 1 -row 3
+grid [ttk::button .doCalibrate -text "Calibrate" -command {calibrate}] -column 1 -row 3
 
 grid [ttk::button .findcircle -text "Find circle" -command {findcircle}] -column 0 -row 4
 grid [ttk::button .findall -text "Find all circles" -command {findall}] -column 1 -row 4
@@ -204,10 +201,10 @@ func (w *Window) CalculateAll() {
 	}()
 }
 
-func (w *Window) Calibrate(path string) {
-	w.Calibration.Path = path
-	w.Dist = w.IR.EvalAsInt("set distance")
-	width := w.IR.EvalAsInt("set width")
+func (w *Window) Calibrate() {
+	w.Calibration.Frame.Path = w.IR.EvalAsString("set calpath")
+	w.Calibration.Distance = w.IR.EvalAsInt("set distance")
+	w.Calibration.Width = w.IR.EvalAsInt("set width")
 	go func() {
 		// Don't calculate if we are working
 		if w.GetState() != IDLE {
@@ -217,17 +214,10 @@ func (w *Window) Calibrate(path string) {
 		w.SetState(WORKING)
 		defer w.SetState(IDLE)
 
-		// Find circle
-		err := w.Calibration.Calculate()
+		err := w.Calibration.Calibrate()
 		if err != nil {
-			fmt.Println(err)
-			return
+			w.SetError("Error occured in calibration: ",err)
 		}
-
-		// Set the calibration data
-		w.Ppc = int(float32(w.Calibration.Centre.Radius*2) / float32(width))
-		fmt.Println(w.Calibration.Centre.Radius, w.Ppc)
-		w.Update(w.Cfra)
 	}()
 }
 
