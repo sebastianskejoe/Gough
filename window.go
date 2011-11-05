@@ -1,47 +1,46 @@
 package main
 
 import (
+	"exp/gui"
+	"fmt"
+	"github.com/nsf/gothic"
 	"image"
 	"image/color"
 	"image/draw"
-	"exp/gui"
-	"os"
 	"sync"
-	"github.com/nsf/gothic"
-	"fmt"
 
-	"strings"
 	"strconv"
+	"strings"
 
 	"runtime"
 )
 
 type Window struct {
-	Screen draw.Image
-	Window gui.Window
-	Ppc int // pixel per centimeter
-	Dist int // distance from camera to track point
-	Cfra int // current frame
-	State int
-	FrameCount int
-	Frames []Frame
+	Screen      draw.Image
+	Window      gui.Window
+	Ppc         int // pixel per centimeter
+	Dist        int // distance from camera to track point
+	Cfra        int // current frame
+	State       int
+	FrameCount  int
+	Frames      []Frame
 	Calibration Frame
-	IR *gothic.Interpreter
+	IR          *gothic.Interpreter
 }
 
-func NewWindow(w,h int) (*Window, os.Error) {
+func NewWindow(w, h int) (*Window, error) {
 	ir := gothic.NewInterpreter("")
 	window := &Window{
-		IR: ir,
-		Screen: image.NewNRGBA(image.Rect(0,0,w,h)),
+		IR:     ir,
+		Screen: image.NewNRGBA(image.Rect(0, 0, w, h)),
 	}
 
-	return window,nil
+	return window, nil
 }
 
-func (w *Window) DrawFrame(frame int) os.Error {
+func (w *Window) DrawFrame(frame int) error {
 	var f Frame
-	var err os.Error
+	var err error
 
 	if frame >= w.FrameCount {
 		fmt.Println("Not in range")
@@ -51,28 +50,27 @@ func (w *Window) DrawFrame(frame int) os.Error {
 	f = w.Frames[frame]
 
 	if f.img == nil {
-		f.img,err = getImage(f.Path)
+		f.img, err = getImage(f.Path)
 		if err != nil {
 			return err
 		}
 	}
 	w.Screen = image.NewNRGBA(f.img.Bounds())
-	draw.Draw(w.Screen, f.img.Bounds(), f.img, image.Point{0,0}, draw.Src)
-	DrawCircle(w.Screen, f.Centre.Centre, f.Centre.Radius, color.RGBA{0,255,255,255})
+	draw.Draw(w.Screen, f.img.Bounds(), f.img, image.Point{0, 0}, draw.Src)
+	DrawCircle(w.Screen, f.Centre.Centre, f.Centre.Radius, color.RGBA{0, 255, 255, 255})
 	return nil
 }
 
 func (w *Window) CreateGUI() {
 	w.IR.UploadImage("screen", w.Screen)
 
-	w.IR.RegisterCommand("nextframe", func () {w.NextFrame()})
-	w.IR.RegisterCommand("prevframe", func () {w.PrevFrame()})
-	w.IR.RegisterCommand("loadframes", func () {w.LoadFrames(w.IR.EvalAsString("set path"))})
-	w.IR.RegisterCommand("calibrate", func () {w.Calibrate(w.IR.EvalAsString("set calpath"))})
-	w.IR.RegisterCommand("findcircle", func () {w.CalculateCurrent()})
-	w.IR.RegisterCommand("findall", func () {w.CalculateAll()})
+	w.IR.RegisterCommand("nextframe", func() { w.NextFrame() })
+	w.IR.RegisterCommand("prevframe", func() { w.PrevFrame() })
+	w.IR.RegisterCommand("loadframes", func() { w.LoadFrames(w.IR.EvalAsString("set path")) })
+	w.IR.RegisterCommand("calibrate", func() { w.Calibrate(w.IR.EvalAsString("set calpath")) })
+	w.IR.RegisterCommand("findcircle", func() { w.CalculateCurrent() })
+	w.IR.RegisterCommand("findall", func() { w.CalculateAll() })
 	w.IR.Eval(fmt.Sprintf(`
-ttk::entry .filename
 grid [ttk::button .prev -text "Previous" -command {prevframe}] -column 0 -row 0 -sticky news
 grid [ttk::button .next -text "Next" -command {nextframe}] -column 1 -row 0 -sticky nwes
 
@@ -95,28 +93,28 @@ grid [ttk::progressbar .progress -maximum 1] -column 1 -row 6 -sticky nwes
 
 bind . <Left> { prevframe }
 bind . <Right> { nextframe }
+
+bind .path <Return> { loadframes }
 	`))
 }
 
 func (w *Window) Update(frame int) {
-	fmt.Println("### In update")
 	err := w.DrawFrame(frame)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	w.IR.UploadImage("screen", w.Screen)
-	w.IR.Eval(".canvas configure -width ",w.Screen.Bounds().Max.X," -height ",w.Screen.Bounds().Max.Y)
-	w.IR.Eval(`wm geometry [winfo parent .canvas] ""`)
+	w.IR.Eval(".canvas configure -width ", w.Screen.Bounds().Max.X, " -height ", w.Screen.Bounds().Max.Y)
+	w.IR.Eval(`wm geometry . ""`)
 
 	// Frame counter
 	if w.GetState() == IDLE {
-		w.IR.Eval(`set framecounter "`,w.Cfra+1,"/",w.FrameCount,`"`)
+		w.IR.Eval(`set framecounter "`, w.Cfra+1, "/", w.FrameCount, `"`)
 	} else {
-		w.IR.Eval(`set framecounter "WORKING `,w.Cfra+1,"/",w.FrameCount,`"`)
+		w.IR.Eval(`set framecounter "WORKING `, w.Cfra+1, "/", w.FrameCount, `"`)
 	}
 }
-
 
 //// Window state
 
@@ -141,117 +139,113 @@ func (w *Window) GetState() int {
 
 //// Simple functions to call from the interface
 func (w *Window) NextFrame() {
-	if w.Cfra+1 < w.FrameCount {
-		w.Cfra++
+	if w.Cfra+1 == w.FrameCount {
+		return
 	}
+	w.Cfra++
 	w.Update(w.Cfra)
 }
 
 func (w *Window) PrevFrame() {
-	if w.Cfra-1 >= 0 {
-		w.Cfra--
+	if w.Cfra-1 < 0 {
+		return
 	}
+	w.Cfra--
 	w.Update(w.Cfra)
 }
 
 func (w *Window) CalculateCurrent() {
 	cfra := w.Cfra
 	go func() {
-		if w.Frames[cfra].Calculated {
-			return
-		}
+		// Only calculate if we are not already calculating
 		if w.GetState() != IDLE {
-			w.IR.Eval(`tk_messageBox -message "Already working!" -icon error`)
+			w.SetError("Already working!")
 			return
 		}
 		w.SetState(WORKING)
-		w.Update(w.Cfra)
-		c,err := findCircle(w.Frames[cfra].Path)
-		w.SetState(IDLE)
+		defer w.SetState(IDLE)
+
+		// Calculate circle
+		err := w.Frames[cfra].Calculate()
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		w.Frames[cfra].Centre = c
-		w.Frames[cfra].Calculated = true
+
+		// Update window to show changes
 		w.Update(cfra)
-		runtime.GC()
-	} ()
+	}()
 }
 
 func (w *Window) CalculateAll() {
-	w.IR.Eval(".progress configure -maximum ",w.FrameCount)
-	go func () {
+	w.IR.Eval(".progress configure -maximum ", w.FrameCount)
+	go func() {
+		// Only calculate if we are not already calculating
 		if w.GetState() != IDLE {
-			w.IR.Eval(`tk_messageBox -message "Already working!" -icon error`)
+			w.SetError("Already working!")
 			return
 		}
 		w.SetState(WORKING)
+		defer w.SetState(IDLE)
 
 		// Loop thorugh each frame
-		for frame := 0 ; frame < w.FrameCount ; frame++ {
-			if w.Frames[frame].Calculated {
-				continue
-			}
-			c,err := findCircle(w.Frames[frame].Path)
+		for frame := 0; frame < w.FrameCount; frame++ {
+			err := w.Frames[frame].Calculate()
 			if err != nil {
-				w.IR.Eval(fmt.Sprintf(`tk_messageBox -message "Couldn't find circle of frame %d - %s" -icon error`, frame, err))
+				w.SetError("Couldn't find circle of frame ",frame,"(",err,")")
 				continue
 			}
-			// New cicle successfully found
-			w.Frames[frame].Centre = c
-			w.Frames[frame].Calculated = true
-			runtime.GC()
 			w.IR.Eval(".progress configure -value ", frame+1)
 		}
 		w.IR.Eval(".progress configure -value ", 0)
 
-		w.SetState(IDLE)
-		fmt.Println("Now we want to update")
+		// Update to show changes
 		w.Update(w.Cfra)
-	} ()
+	}()
 }
 
 func (w *Window) Calibrate(path string) {
 	w.Calibration.Path = path
 	w.Dist = w.IR.EvalAsInt("set distance")
 	width := w.IR.EvalAsInt("set width")
-	go func () {
-		if w.Calibration.Calculated {
-			return
-		}
+	go func() {
+		// Don't calculate if we are working
 		if w.GetState() != IDLE {
-			w.IR.Eval(`tk_messageBox -message "Already working!" -icon error`)
+			w.SetError("Already working!")
 			return
 		}
 		w.SetState(WORKING)
-		w.Update(w.Cfra)
-		c,err := findCircle(path)
-		w.SetState(IDLE)
+		defer w.SetState(IDLE)
+
+		// Find circle
+		err := w.Calibration.Calculate()
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		w.Calibration.Centre = c
-		w.Calibration.Calculated = true
-		w.Ppc = int(float32(w.Calibration.Centre.Radius*2)/float32(width))
+
+		// Set the calibration data
+		w.Ppc = int(float32(w.Calibration.Centre.Radius*2) / float32(width))
 		fmt.Println(w.Calibration.Centre.Radius, w.Ppc)
 		w.Update(w.Cfra)
-		runtime.GC()
-	} ()
+	}()
 }
 
 func (w *Window) LoadFrames(imgPath string) {
 	r := strings.TrimFunc(imgPath, TrimFunc)
 	split := strings.Split(r[1:len(r)-1], "-")
-	start,_ := strconv.Atoi(split[0])
-	end,_ := strconv.Atoi(split[1])
+	start, _ := strconv.Atoi(split[0])
+	end, _ := strconv.Atoi(split[1])
 	f := 0
-	for i := start ; i <= end ; i++ {
-		path := strings.Replace(imgPath, r, strconv.Itoa(i),-1)
+	for i := start; i <= end; i++ {
+		path := strings.Replace(imgPath, r, strconv.Itoa(i), -1)
 		w.Frames = append(w.Frames, Frame{Id: f, Path: path})
 		f++
 	}
 	w.FrameCount = f
 	w.Update(w.Cfra)
+}
+
+func (w *Window) SetError(args ...interface{}) {
+	w.IR.Eval(fmt.Sprintf(`tk_messageBox -message "%s" -icon error`,fmt.Sprint(args...)))
 }
