@@ -1,32 +1,32 @@
 package main
 
 import (
-	"image"
 	"fmt"
-	"os"
-	"image/png"
+	"image"
 	"image/color"
+	"image/png"
+	"os"
 	"time"
 )
 
 func filter(img *image.Image, filtered chan<- *image.Point) {
 	bx := (*img).Bounds().Max.X
 	by := (*img).Bounds().Max.Y
-//	sent := 0
-	for x := 0 ; x < bx ; x++ {
-		for y := 0 ; y < by ; y++ {
-			if ColorIsGood((*img).At(x,y)) {
-				filtered <- &image.Point{x,y}
-//				sent++
+	//	sent := 0
+	for x := 0; x < bx; x++ {
+		for y := 0; y < by; y++ {
+			if ColorIsGood((*img).At(x, y)) {
+				filtered <- &image.Point{x, y}
+				//				sent++
 			}
 		}
 	}
-//	fmt.Printf("Sent %d times in filter()\n", sent)
+	//	fmt.Printf("Sent %d times in filter()\n", sent)
 	close(filtered)
 }
 
 func ColorIsGood(c color.Color) bool {
-	r,_,_,_ := c.RGBA()
+	r, _, _, _ := c.RGBA()
 	if r > 30000 {
 		return true
 	}
@@ -36,37 +36,45 @@ func ColorIsGood(c color.Color) bool {
 func findBounds(img *image.Image) image.Rectangle {
 	bx := (*img).Bounds().Max.X
 	by := (*img).Bounds().Max.Y
-	maxx,maxy,minx,miny := 0,0,bx,by
+	maxx, maxy, minx, miny := 0, 0, bx, by
 
-	for x := 0 ; x < bx ; x++ {
-		for y := 0 ; y < by ; y++ {
-			if ColorIsGood((*img).At(x,y)) {
-				if x > maxx { maxx = x }
-				if x < minx { minx = x }
-				if y > maxy { maxy = y }
-				if y < miny { miny = y }
+	for x := 0; x < bx; x++ {
+		for y := 0; y < by; y++ {
+			if ColorIsGood((*img).At(x, y)) {
+				if x > maxx {
+					maxx = x
+				}
+				if x < minx {
+					minx = x
+				}
+				if y > maxy {
+					maxy = y
+				}
+				if y < miny {
+					miny = y
+				}
 			}
 		}
 	}
 
-	return image.Rect(minx,miny,maxx,maxy)
+	return image.Rect(minx, miny, maxx, maxy)
 }
 
-func getImage(path string) (image.Image,os.Error) {
+func getImage(path string) (image.Image, error) {
 	// Get image
-	file,err := os.Open(path)
+	file, err := os.Open(path)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return nil,err
+		return nil, err
 	}
 	defer file.Close()
 
-	img,err := png.Decode(file)
+	img, err := png.Decode(file)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return nil,err
+		return nil, err
 	}
-	return img,err
+	return img, err
 }
 
 func TrimFunc(c int) bool {
@@ -76,14 +84,14 @@ func TrimFunc(c int) bool {
 	return true
 }
 
-func findCircle(path string) (Circle,os.Error) {
+func findCircle(path string) (Circle, error) {
 	filtered := make(chan *image.Point, 1000)
 	edge := make(chan image.Point, 100)
 	transformed := make(chan *Circle, 400)
 
-	img,err := getImage(path)
+	img, err := getImage(path)
 	if err != nil {
-		return Circle{},err
+		return Circle{}, err
 	}
 
 	fmt.Printf("Finding circle of %s ... ", path)
@@ -92,11 +100,11 @@ func findCircle(path string) (Circle,os.Error) {
 
 	r := findBounds(&img)
 
-	go filter(&img,filtered)
-	go Sobel(&img,filtered,edge)
+	go filter(&img, filtered)
+	go Sobel(&img, filtered, edge)
 	go Transform(edge, transformed, r)
 
-	bx,by := img.Bounds().Max.X,img.Bounds().Max.Y
+	bx, by := img.Bounds().Max.X, img.Bounds().Max.Y
 	votes := make([]int32, bx*by*bx)
 	votes[0] = 1
 	var c *Circle
@@ -105,7 +113,7 @@ func findCircle(path string) (Circle,os.Error) {
 	max := int32(0)
 
 	for c = range transformed {
-		index = c.Radius+bx*c.Centre.Y+bx*by*c.Centre.X
+		index = c.Radius + bx*c.Centre.Y + bx*by*c.Centre.X
 		votes[index] += 1
 		if votes[index] > max {
 			max = votes[index]
@@ -116,5 +124,5 @@ func findCircle(path string) (Circle,os.Error) {
 	end := time.Seconds()
 	fmt.Printf("Done in %d seconds\n", end-start)
 
-	return centre,nil
+	return centre, nil
 }
