@@ -67,6 +67,13 @@ func (w *Window) CreateGUI() {
 	w.IR.RegisterCommand("calibrate", func() { w.Calibrate() })
 	w.IR.RegisterCommand("findcircle", func() { w.CalculateCurrent() })
 	w.IR.RegisterCommand("findall", func() { w.CalculateAll() })
+	w.IR.RegisterCommand("loadfile", func() {
+		err := load(w, w.IR.EvalAsString("set file"))
+		if err != nil {
+			w.SetError("Error while loading: ",err)
+		}
+		w.Update(w.Cfra)
+	})
 	w.IR.Eval(fmt.Sprintf(`
 grid [ttk::button .prev -text "Previous" -command {prevframe}] -column 0 -row 0 -sticky news
 grid [ttk::button .next -text "Next" -command {nextframe}] -column 1 -row 0 -sticky nwes
@@ -87,6 +94,8 @@ grid [canvas .canvas] -columnspan 2 -column 0 -row 5 -sticky news
 
 grid [ttk::label .framecounter -textvariable framecounter] -column 0 -row 6 -sticky news
 grid [ttk::progressbar .progress -maximum 1] -column 1 -row 6 -sticky nwes
+
+grid [ttk::button .loadfile -text "Load" -command {set file [tk_getOpenFile] ; loadfile}] -column 0 -row 7
 
 bind . <Left> { prevframe }
 bind . <Right> { nextframe }
