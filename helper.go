@@ -15,7 +15,7 @@ func filter(img *image.Image, filtered chan<- *image.Point) {
 	//	sent := 0
 	for x := 0; x < bx; x++ {
 		for y := 0; y < by; y++ {
-			if ColorIsGood((*img).At(x, y)) {
+			if FilterFunc((*img).At(x, y)) {
 				filtered <- &image.Point{x, y}
 				//				sent++
 			}
@@ -40,7 +40,7 @@ func findBounds(img *image.Image) image.Rectangle {
 
 	for x := 0; x < bx; x++ {
 		for y := 0; y < by; y++ {
-			if ColorIsGood((*img).At(x, y)) {
+			if FilterFunc((*img).At(x, y)) {
 				if x > maxx {
 					maxx = x
 				}

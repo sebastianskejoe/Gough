@@ -14,7 +14,7 @@ func abs(x int) int {
 }
 
 func clampedFilter(c color.Color) int {
-	if ColorIsGood(c) { return 255 }
+	if FilterFunc(c) { return 255 }
 	return 0
 }
 

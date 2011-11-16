@@ -3,11 +3,14 @@ package main
 import (
 	"fmt"
 	"flag"
+	"image/color"
 )
 
 var savefile = flag.String("file", "", "File to save/load data to/from.")
+var FilterFunc func(color.Color) bool
 
 func main() {
+	FilterFunc = ColorIsGood
 	window,err := NewWindow(1,1)
 	if err != nil {
 		fmt.Println(err)
