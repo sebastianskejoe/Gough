@@ -28,8 +28,9 @@ type Window struct {
 func NewWindow(w, h int) (*Window, error) {
 	ir := gothic.NewInterpreter("")
 	window := &Window{
-		IR:     ir,
-		Screen: image.NewNRGBA(image.Rect(0, 0, w, h)),
+		IR:				ir,
+		Screen:			image.NewNRGBA(image.Rect(0, 0, w, h)),
+		Calibration:	CalibrationData{Image: image.NewNRGBA(image.Rect(0,0,w,h))},
 	}
 
 	return window, nil
@@ -67,6 +68,7 @@ func (w *Window) CreateGUI() {
 	w.IR.RegisterCommand("calibrate", func() { w.Calibrate() })
 	w.IR.RegisterCommand("findcircle", func() { w.CalculateCurrent() })
 	w.IR.RegisterCommand("findall", func() { w.CalculateAll() })
+	w.IR.RegisterCommand("makecalwin", func() { CreateCalibrationWindow(w) })
 	w.IR.RegisterCommand("loadfile", func() {
 		err := load(w, w.IR.EvalAsString("set file"))
 		if err != nil {
@@ -81,13 +83,6 @@ grid [ttk::button .next -text "Next" -command {nextframe}] -column 1 -row 0 -sti
 grid [ttk::entry .path -textvariable path] -column 0 -row 1 -sticky nwes
 grid [ttk::button .addpaths -text "Add frames" -command {loadframes}] -column 1 -row 1
 
-grid [ttk::entry .calibrate -textvariable calpath] -column 0 -row 2 -sticky nwes
-grid [ttk::spinbox .distance -from 0 -to 900 -textvariable distance] -column 1 -row 2 -sticky news
-grid [ttk::spinbox .width -from 0 -to 900 -textvariable width] -column 0 -row 3 -sticky news
-grid [ttk::button .doCalibrate -text "Calibrate" -command {calibrate}] -column 1 -row 3
-
-grid [ttk::button .findcircle -text "Find circle" -command {findcircle}] -column 0 -row 4
-grid [ttk::button .findall -text "Find all circles" -command {findall}] -column 1 -row 4
 
 grid [canvas .canvas] -columnspan 2 -column 0 -row 5 -sticky news
 .canvas create image 0 0 -anchor nw -image screen
@@ -101,6 +96,20 @@ bind . <Left> { prevframe }
 bind . <Right> { nextframe }
 
 bind .path <Return> { loadframes }
+
+menu .menu
+
+.menu add cascade -menu .menu.options -label Options
+.menu add cascade -menu .menu.track -label Track
+
+menu .menu.track
+.menu.track add command -label "Find circle" -command findcircle
+.menu.track add command -label "Find all circles" -command findall
+
+menu .menu.options
+.menu.options add command -label Calibrate -command makecalwin
+
+. configure -menu .menu
 	`))
 }
 
@@ -211,7 +220,6 @@ func (w *Window) CalculateAll() {
 }
 
 func (w *Window) Calibrate() {
-	w.Calibration.Frame.Path = w.IR.EvalAsString("set calpath")
 	w.Calibration.Distance = w.IR.EvalAsInt("set distance")
 	w.Calibration.Width = w.IR.EvalAsInt("set width")
 	go func() {
